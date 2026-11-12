@@ -1,0 +1,10 @@
+{
+  "vertex": "monotone_godrays:godrays_screen",
+  "fragment": "monotone_godrays:godrays_upscale",
+  "samplers": [
+    { "name": "RaySampler" }
+  ],
+  "uniforms": [
+    { "name": "RayTexel", "type": "float", "count": 2, "values": [ 0.001, 0.001 ] }
+  ]
+}

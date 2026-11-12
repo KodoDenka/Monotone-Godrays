@@ -1,0 +1,14 @@
+{
+  "vertex": "monotone_godrays:godrays_screen",
+  "fragment": "monotone_godrays:godrays_flare",
+  "samplers": [
+    { "name": "DepthSampler" },
+    { "name": "LensFlare" }
+  ],
+  "uniforms": [
+    { "name": "LightPos", "type": "float", "count": 2, "values": [ 0.5, 0.5 ] },
+    { "name": "FlareColor", "type": "float", "count": 3, "values": [ 1.0, 0.93, 0.8 ] },
+    { "name": "Aspect", "type": "float", "count": 1, "values": [ 1.0 ] },
+    { "name": "DepthTexel", "type": "float", "count": 2, "values": [ 0.001, 0.001 ] }
+  ]
+}

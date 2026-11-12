@@ -1,0 +1,19 @@
+{
+	"monotone_godrays.client": "Monotone Godrays",
+	"monotone_godrays.client.enabled": "God Rays",
+	"monotone_godrays.client.enabled.desc": "If enabled, the sun and moon cast light shafts past terrain and clouds. If disabled, no rays or lens flare are drawn.",
+	"monotone_godrays.client.sunIntensity": "Sun Ray Intensity",
+	"monotone_godrays.client.sunIntensity.desc": "How bright the sun's rays are. Set to 0 for no sun rays.",
+	"monotone_godrays.client.moonIntensity": "Moon Ray Intensity",
+	"monotone_godrays.client.moonIntensity.desc": "How bright the moon's rays are at night. They follow the moon's phase. Set to 0 for no moon rays.",
+	"monotone_godrays.client.quality": "Ray Quality",
+	"monotone_godrays.client.quality.desc": "How many steps each ray takes toward its light. Higher values give smoother rays, but cost more GPU time for each sun or moon on screen.",
+	"monotone_godrays.client.density": "Ray Length",
+	"monotone_godrays.client.density.desc": "How far the rays reach from their light, as a share of the way to it.",
+	"monotone_godrays.client.decay": "Ray Falloff",
+	"monotone_godrays.client.decay.desc": "How much light each step of a ray keeps. Lower values give shorter, fainter rays.",
+	"monotone_godrays.client.lensFlare": "Lens Flare",
+	"monotone_godrays.client.lensFlare.desc": "How bright the flare over a sun in view is. Set to 0 for no lens flare.",
+	"monotone_godrays.client.fullResolution": "Full Resolution Rays",
+	"monotone_godrays.client.fullResolution.desc": "If enabled, rays are drawn at your game's full resolution. If disabled, they are drawn at half resolution and scaled up, which is about four times faster and looks almost the same."
+}

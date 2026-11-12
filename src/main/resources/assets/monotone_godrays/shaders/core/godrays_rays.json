@@ -1,0 +1,17 @@
+{
+  "vertex": "monotone_godrays:godrays_screen",
+  "fragment": "monotone_godrays:godrays_rays",
+  "samplers": [
+    { "name": "DepthSampler" }
+  ],
+  "uniforms": [
+    { "name": "LightPos", "type": "float", "count": 2, "values": [ 0.5, 0.5 ] },
+    { "name": "LightRadius", "type": "float", "count": 1, "values": [ 0.06 ] },
+    { "name": "LightColor", "type": "float", "count": 3, "values": [ 1.0, 0.7, 0.3 ] },
+    { "name": "Samples", "type": "float", "count": 1, "values": [ 30.0 ] },
+    { "name": "Density", "type": "float", "count": 1, "values": [ 0.92 ] },
+    { "name": "Decay", "type": "float", "count": 1, "values": [ 0.99 ] },
+    { "name": "Aspect", "type": "float", "count": 1, "values": [ 1.0 ] },
+    { "name": "RayTexel", "type": "float", "count": 2, "values": [ 0.001, 0.001 ] }
+  ]
+}

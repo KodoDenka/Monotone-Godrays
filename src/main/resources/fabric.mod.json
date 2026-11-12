@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "monotone_godrays",
+	"version": "${version}",
+	"name": "Monotone Godrays",
+	"description": "Screen-space god rays from the sun and moon, and a lens flare, without a shader pack. Other mods can add their own suns and moons, in their own colors.",
+	"authors": [
+		"KodoDenka"
+	],
+	"contributors": [
+		"MehVahdJukaar (Sunbathing Godrays, the shaders this ports)"
+	],
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.manasnow.monotonegodrays.MonotoneGodrays"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*",
+		"fzzy_config": ">=0.7.7",
+		"fabric-language-kotlin": "*"
+	},
+	"suggests": {
+		"planet_system": "*"
+	}
+}
