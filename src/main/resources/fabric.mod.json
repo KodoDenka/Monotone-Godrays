@@ -17,6 +17,9 @@
 			"dev.manasnow.monotonegodrays.MonotoneGodrays"
 		]
 	},
+	"mixins": [
+		"monotone_godrays.mixins.json"
+	],
 	"depends": {
 		"fabricloader": ">=0.19.3",
 		"minecraft": "~1.21.1",

@@ -1,0 +1,11 @@
+{
+  "vertex": "monotone_godrays:godrays_screen",
+  "fragment": "monotone_godrays:godrays_mask",
+  "samplers": [
+    { "name": "DepthSampler" },
+    { "name": "CloudlessDepth" }
+  ],
+  "uniforms": [
+    { "name": "CloudLight", "type": "float", "count": 1, "values": [ 0.0 ] }
+  ]
+}

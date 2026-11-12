@@ -12,6 +12,8 @@
 	"monotone_godrays.client.density.desc": "How far the rays reach from their light, as a share of the way to it.",
 	"monotone_godrays.client.decay": "Ray Falloff",
 	"monotone_godrays.client.decay.desc": "How much light each step of a ray keeps. Lower values give shorter, fainter rays.",
+	"monotone_godrays.client.cloudBlocking": "Cloud Light Blocking",
+	"monotone_godrays.client.cloudBlocking.desc": "How much clouds block rays. At 1, a thin cloud blocks about a quarter of the light and a thick one about three quarters. Set to 0 for clouds that block nothing. Has no effect with Fabulous graphics, where clouds never block rays.",
 	"monotone_godrays.client.lensFlare": "Lens Flare",
 	"monotone_godrays.client.lensFlare.desc": "How bright the flare over a sun in view is. Set to 0 for no lens flare.",
 	"monotone_godrays.client.fullResolution": "Full Resolution Rays",

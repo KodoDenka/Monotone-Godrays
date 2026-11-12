@@ -1,9 +1,10 @@
 #version 150
 
 // One light's rays, at the rays target's resolution. Ported from Sunbathing Godrays (MehVahdJukaar, MIT): march from
-// the pixel toward the light, adding the light's disc wherever the step lands on open sky.
+// the pixel toward the light, adding the light's disc wherever the step lands on open sky, and some of it through
+// clouds.
 
-uniform sampler2D DepthSampler;
+uniform sampler2D OpenSampler;  // godrays_mask: red how much light gets through, green 1 where the frame shows sky
 
 uniform vec2 LightPos;      // screen uv
 uniform float LightRadius;  // disc radius, in screen heights
@@ -21,8 +22,13 @@ const float EXPOSURE = 0.25;
 const float WEIGHT = 0.25;
 const float GLOW = 0.4;
 
+float open(vec2 uv) {
+    return texture(OpenSampler, uv).r;
+}
+
+// The frame shows sky here, not terrain or cloud.
 float sky(vec2 uv) {
-    return step(0.999999, texture(DepthSampler, uv).r);
+    return step(0.5, texture(OpenSampler, uv).g);
 }
 
 float interleavedGradientNoise(vec2 uv) {
@@ -60,7 +66,7 @@ void main() {
         vec2 b0 = smoothstep(vec2(0.0), vec2(0.08), coord);
         vec2 b1 = smoothstep(vec2(1.0), vec2(0.92), coord);
         float border = b0.x * b0.y * b1.x * b1.y;
-        acc += sky(coord) * disc(coord) * decay * WEIGHT * border;
+        acc += open(coord) * disc(coord) * decay * WEIGHT * border;
         decay *= Decay;
     }
 

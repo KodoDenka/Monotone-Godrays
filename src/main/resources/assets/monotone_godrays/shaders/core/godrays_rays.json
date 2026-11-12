@@ -2,7 +2,7 @@
   "vertex": "monotone_godrays:godrays_screen",
   "fragment": "monotone_godrays:godrays_rays",
   "samplers": [
-    { "name": "DepthSampler" }
+    { "name": "OpenSampler" }
   ],
   "uniforms": [
     { "name": "LightPos", "type": "float", "count": 2, "values": [ 0.5, 0.5 ] },

@@ -3,6 +3,7 @@ package dev.manasnow.monotonegodrays;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.manasnow.monotonegodrays.api.GodrayLight;
+import dev.manasnow.monotonegodrays.api.GodrayLightProvider;
 import dev.manasnow.monotonegodrays.api.MonotoneGodraysApi;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.loader.api.FabricLoader;
@@ -11,6 +12,7 @@ import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.gl.SimpleFramebuffer;
+import net.minecraft.client.option.CloudRenderMode;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.Camera;
@@ -36,13 +38,17 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Draws the rays after the world. Each light's rays march at half resolution into {@code rays}, adding up, and are
+ * Draws the rays after the world. A half-resolution {@code mask} holds how much light gets through each pixel (sky,
+ * cloud or terrain, from the depth now and the depth before the clouds). Each light's rays march over it into
+ * {@code rays}, adding up, and are
  * scaled back up onto the world with an FXAA-style filter. The upscale quad sits just short of the far plane with the
  * depth test reversed, so only geometry gets rays (the sky already has its sun) and the edge stays full resolution.
  * Lens flares go to their own target and are added over everything.
  */
 public final class GodrayRenderer {
 
+    @Nullable
+    static ShaderProgram maskProgram;
     @Nullable
     static ShaderProgram raysProgram;
     @Nullable
@@ -53,9 +59,12 @@ public final class GodrayRenderer {
     /** Lights and flares drawn last frame, for tests. */
     public static int lastLights;
     public static int lastFlares;
+    /** Whether last frame had the depth from before the clouds, and the share of light its clouds let through. */
+    public static boolean lastCloudCopy;
+    public static float lastCloudLight;
     /** Tests set this to time the passes on the GPU; each frame then waits for the timer's result. */
     public static boolean measure;
-    /** Time the passes took and frames timed, added up while {@link #measure} is on. */
+    /** Time the passes and the depth copy took and frames timed, added up while {@link #measure} is on. */
     public static long measuredNanos;
     public static int measuredFrames;
 
@@ -70,11 +79,20 @@ public final class GodrayRenderer {
     private static final float FLARE_SUN_SHARE = 0.35F;
     /** Rain past this fades the rays out entirely. */
     private static final float RAIN_CUTOFF = 0.2F;
+    /** Vanilla's cloud alpha, for worlds whose provider doesn't say. */
+    private static final float VANILLA_CLOUD_OPACITY = 0.8F;
+    /** A cloud blocks its opacity to this power: 0.72 blocks about a quarter, 0.93 about three quarters. */
+    private static final float CLOUD_BLOCK_POWER = 4;
     private static final Identifier LENS_FLARE = Identifier.of(MonotoneGodrays.MOD_ID, "textures/effect/lens_flare.png");
 
+    private static SimpleFramebuffer mask;
     private static SimpleFramebuffer rays;
     private static SimpleFramebuffer flares;
     private static final List<GodrayLight> frameLights = new ArrayList<>();
+    /** The depth buffer just before the clouds, so cloud pixels can be told from terrain. */
+    private static SimpleFramebuffer cloudless;
+    private static boolean cloudlessThisFrame;
+    private static boolean cloudlessFailed;
 
     private static int timerQuery;
 
@@ -88,12 +106,50 @@ public final class GodrayRenderer {
     private record OnScreen(float u, float v, float radius, float r, float g, float b, float weight,
                             float flareR, float flareG, float flareB) {}
 
+    /**
+     * Copies the depth buffer before the clouds draw. With Fabulous graphics the clouds draw to their own target, so the
+     * copy matches the final depth and clouds block nothing, as before.
+     */
+    public static void beforeClouds() {
+        GodraysConfig config = GodraysConfig.get();
+        MinecraftClient client = MinecraftClient.getInstance();
+        // Needed at Cloud Light Blocking 0 too: without the copy, clouds look like terrain and block everything.
+        if (cloudlessFailed || !config.enabled.get() || client.options.getCloudRenderModeValue() == CloudRenderMode.OFF) return;
+        Framebuffer main = client.getFramebuffer();
+        if (cloudless == null) {
+            cloudless = new SimpleFramebuffer(main.textureWidth, main.textureHeight, true, MinecraftClient.IS_SYSTEM_MAC);
+        } else if (cloudless.textureWidth != main.textureWidth || cloudless.textureHeight != main.textureHeight) {
+            cloudless.resize(main.textureWidth, main.textureHeight, MinecraftClient.IS_SYSTEM_MAC);
+        }
+        if (measure) {
+            if (timerQuery == 0) timerQuery = GL15.glGenQueries();
+            GL15.glBeginQuery(GL33.GL_TIME_ELAPSED, timerQuery);
+        }
+        GL11.glGetError();
+        cloudless.copyDepthFrom(main);
+        // A mod that changes the main depth format (adding stencil) makes the copy fail; then clouds just block it all.
+        if (GL11.glGetError() != GL11.GL_NO_ERROR) {
+            cloudlessFailed = true;
+            MonotoneGodrays.LOGGER.warn("Couldn't copy the depth buffer before the clouds, so clouds will block rays fully");
+        }
+        main.beginWrite(false);
+        if (measure) {
+            GL15.glEndQuery(GL33.GL_TIME_ELAPSED);
+            measuredNanos += GL33.glGetQueryObjecti64(timerQuery, GL15.GL_QUERY_RESULT);
+        }
+        cloudlessThisFrame = !cloudlessFailed;
+    }
+
     static void render(WorldRenderContext context) {
         lastLights = 0;
         lastFlares = 0;
+        boolean haveCloudless = cloudlessThisFrame;
+        cloudlessThisFrame = false;
         GodraysConfig config = GodraysConfig.get();
-        ShaderProgram raysShader = raysProgram, flareShader = flareProgram, upscaleShader = upscaleProgram;
-        if (!config.enabled.get() || raysShader == null || flareShader == null || upscaleShader == null) return;
+        ShaderProgram maskShader = maskProgram, raysShader = raysProgram, flareShader = flareProgram, upscaleShader = upscaleProgram;
+        if (!config.enabled.get() || maskShader == null || raysShader == null || flareShader == null || upscaleShader == null) {
+            return;
+        }
         MinecraftClient client = MinecraftClient.getInstance();
         ClientWorld world = context.world();
         // The game renderer's camera, not the context's: Sable swaps in a stand-in there that is empty by now.
@@ -103,9 +159,8 @@ public final class GodrayRenderer {
         if (clear <= 0) return;
 
         frameLights.clear();
-        if (!MonotoneGodraysApi.collect(world, tickDelta, frameLights::add)) {
-            VanillaLights.lights(world, tickDelta, frameLights::add);
-        }
+        GodrayLightProvider provider = MonotoneGodraysApi.collect(world, tickDelta, frameLights::add);
+        if (provider == null) VanillaLights.lights(world, tickDelta, frameLights::add);
         if (frameLights.isEmpty()) return;
 
         // Moons fade in as the highest sun sets.
@@ -153,6 +208,13 @@ public final class GodrayRenderer {
         int width = Math.max(1, main.textureWidth / divisor), height = Math.max(1, main.textureHeight / divisor);
         float aspect = main.textureWidth / (float) main.textureHeight;
         int depth = main.getDepthAttachment();
+        // Where the copy is sky and the frame isn't, there's a cloud, which lets this much through.
+        int cloudlessDepth = haveCloudless ? cloudless.getDepthAttachment() : depth;
+        float opacity = provider == null ? Float.NaN : provider.cloudOpacity(world);
+        if (Float.isNaN(opacity)) opacity = VANILLA_CLOUD_OPACITY;
+        float cloudLight = 1 - MathHelper.clamp(config.cloudBlocking.get() * (float) Math.pow(opacity, CLOUD_BLOCK_POWER), 0, 1);
+        lastCloudCopy = haveCloudless;
+        lastCloudLight = cloudLight;
 
         if (measure) {
             if (timerQuery == 0) timerQuery = GL15.glGenQueries();
@@ -163,9 +225,19 @@ public final class GodrayRenderer {
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE);
 
+        // How much light gets through each pixel, once, at the rays' size.
+        mask = target(mask, width, height);
+        mask.beginWrite(true);
+        RenderSystem.disableBlend();
+        maskShader.addSampler("DepthSampler", depth);
+        maskShader.addSampler("CloudlessDepth", cloudlessDepth);
+        uniform(maskShader, "CloudLight", cloudLight);
+        fullscreen(maskShader, 0);
+        RenderSystem.enableBlend();
+
         rays = target(rays, width, height);
         rays.beginWrite(true);
-        raysShader.addSampler("DepthSampler", depth);
+        raysShader.addSampler("OpenSampler", mask);
         uniform(raysShader, "Samples", config.quality.get().floatValue());
         uniform(raysShader, "Density", config.density.get());
         uniform(raysShader, "Decay", config.decay.get());
@@ -186,6 +258,8 @@ public final class GodrayRenderer {
             AbstractTexture sprite = client.getTextureManager().getTexture(LENS_FLARE);
             sprite.setFilter(true, false);
             flareShader.addSampler("DepthSampler", depth);
+            flareShader.addSampler("CloudlessDepth", cloudlessDepth);
+            uniform(flareShader, "CloudLight", cloudLight);
             flareShader.addSampler("LensFlare", sprite.getGlId());
             uniform(flareShader, "Aspect", aspect);
             uniform(flareShader, "DepthTexel", 1F / main.textureWidth, 1F / main.textureHeight);

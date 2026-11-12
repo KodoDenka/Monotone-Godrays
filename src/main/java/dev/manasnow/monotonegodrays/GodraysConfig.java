@@ -37,6 +37,8 @@ public class GodraysConfig extends Config {
     public ValidatedFloat density = new ValidatedFloat(0.92F, 1.0F, 0.5F);
     /** How much each step keeps of the one before. */
     public ValidatedFloat decay = new ValidatedFloat(0.99F, 1.0F, 0.85F);
+    /** Scales how much a cloud blocks: its opacity to the fourth power, so vanilla's 0.8 blocks about 41%. */
+    public ValidatedFloat cloudBlocking = new ValidatedFloat(1.0F, 2.0F, 0.0F);
     public ValidatedFloat lensFlare = new ValidatedFloat(0.5F, 1.0F, 0.0F);
     public ValidatedBoolean fullResolution = new ValidatedBoolean(false);
 }

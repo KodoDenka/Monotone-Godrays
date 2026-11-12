@@ -1,6 +1,7 @@
 package dev.manasnow.monotonegodrays.api;
 
 import net.minecraft.client.world.ClientWorld;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 
 import java.util.List;
@@ -27,11 +28,12 @@ public final class MonotoneGodraysApi {
         return new Quaternionf().rotateY((float) Math.toRadians(-90)).rotateX(skyAngle * (float) (Math.PI * 2));
     }
 
-    /** Asks each provider in turn for {@code world}'s lights; returns whether one handled it. */
-    public static boolean collect(ClientWorld world, float tickDelta, Consumer<GodrayLight> out) {
+    /** Asks each provider in turn for {@code world}'s lights; returns the one that handled it, or null. */
+    @Nullable
+    public static GodrayLightProvider collect(ClientWorld world, float tickDelta, Consumer<GodrayLight> out) {
         for (GodrayLightProvider provider : PROVIDERS) {
-            if (provider.lights(world, tickDelta, out)) return true;
+            if (provider.lights(world, tickDelta, out)) return provider;
         }
-        return false;
+        return null;
     }
 }

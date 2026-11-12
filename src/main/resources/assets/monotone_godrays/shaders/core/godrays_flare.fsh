@@ -4,20 +4,25 @@
 // how much of the sun is open sky.
 
 uniform sampler2D DepthSampler;
+uniform sampler2D CloudlessDepth;  // depth before the clouds drew; DepthSampler again when there is no copy
 uniform sampler2D LensFlare;    // grayscale "nova" sprite, CC0 via OpenGameArt
 
 uniform vec2 LightPos;          // screen uv
 uniform vec3 FlareColor;        // tint, already scaled by strength and the screen-edge fade
 uniform float Aspect;
 uniform vec2 DepthTexel;
+uniform float CloudLight;       // share of the light a cloud lets through
 
 in vec2 texCoord;
 out vec4 fragColor;
 
 const float FLARE_HALF = 0.35;  // sprite half-size, in screen heights
 
+// 1 for open sky, CloudLight for a cloud in front of it, 0 for terrain.
 float skyAt(vec2 uv) {
-    return step(0.999999, texture(DepthSampler, clamp(uv, 0.0, 1.0)).r);
+    uv = clamp(uv, 0.0, 1.0);
+    float beforeClouds = step(0.999999, texture(CloudlessDepth, uv).r);
+    return beforeClouds * mix(CloudLight, 1.0, step(0.999999, texture(DepthSampler, uv).r));
 }
 
 void main() {
